@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App | Niaz M. Sameer</title>
+    <style>
+      * {
+        font-family: sans-serif;
+        box-sizing: border-box;
+
+        margin: 0;
+      }
+
+      .display-container {
+        height: 93vh;
+        width: 100vw;
+
+        padding: 20px;
+      }
+
+      .control-container {
+        height: 7vh;
+        width: 100vw;
+
+        padding: 20px;
+        padding-top: 0;
+      }
+
+      #main-text-area {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="display-container">
+      <textarea id="main-text-area"></textarea>
+    </div>
+    <div class="control-container">
+      <form id="main-input-form">
+        <input id="main-input-field" placeholder="Say something..." />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+    <script>
+      var mainTextArea = document.getElementById("main-text-area");
+      var mainForm = document.getElementById("main-input-form");
+      var mainInputField = document.getElementById("main-input-field");
+      var isAuthenticating = false;
+
+      var ws;
+
+      function addText(text) {
+        mainTextArea.value = mainTextArea.value + text;
+      }
+
+      function connectToChat() {
+        var protocol;
+        if (window.location.protocol == "https:") {
+          protocol = "wss";
+        } else {
+          protocol = "ws";
+        }
+
+        var url = protocol + "://" + window.location.host + "/chat";
+
+        ws = new WebSocket(url);
+
+        ws.onmessage = function (event) {
+          console.log(event.data);
+
+          if (event.data == "auth") {
+            isAuthenticating = true;
+            addText("SERVER: Please enter a username\n");
+          } else if (event.data == "connected") {
+            isAuthenticating = false;
+            addText("SERVER: Welcome!\n");
+          } else if (event.data.split(" ")[0] == "message") {
+            var data = event.data.split(" ");
+            data.splice(0, 1);
+            data = data.join(" ");
+
+            var payload = JSON.parse(data);
+            console.log(payload);
+
+            addText(`${payload.username}: ${payload.message}\n`);
+          }
+        };
+      }
+
+      function sendMessage(text) {
+        if (isAuthenticating) {
+          text = "auth " + text;
+        }
+
+        ws.send(text);
+      }
+
+      mainForm.addEventListener("submit", (event) => {
+        var text = mainInputField.value;
+        sendMessage(text);
+        mainInputField.value = "";
+        event.preventDefault();
+      });
+
+      connectToChat();
+    </script>
+  </body>
+</html>
